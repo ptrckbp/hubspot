@@ -9,4 +9,10 @@ export default new IntegrationDefinition({
       messages: { ...messages.defaults },
     },
   },
-})
+  secrets: {
+    DEV_LOGS_URL: {
+      optional: true,
+      description: "The URL to send logs to",
+    },
+  },
+});

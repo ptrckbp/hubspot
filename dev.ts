@@ -24,7 +24,19 @@ const logWithTable = (timestamp: string, body: string) => {
   if (!deployedCorrectly) {
     return;
   }
-  table.push([chalk.green(timestamp), JSON.parse(body)]);
+
+  let bodyToDisplay = body;
+
+  try {
+    const parsed = JSON.parse(body);
+    if (typeof parsed === "string") {
+      bodyToDisplay = parsed;
+    }
+  } catch (error) {
+    // do nothing
+  }
+
+  table.push([chalk.green(timestamp), bodyToDisplay]);
 
   // Clear the console before printing the updated table (optional, for cleaner output)
   console.clear();
@@ -34,18 +46,9 @@ const logWithTable = (timestamp: string, body: string) => {
 
 // Endpoint to log the body of the request
 app.post("/log-body", (req, res) => {
-  let body = req.body;
-
   const timestamp = new Date().toISOString();
 
-  // Try to parse the body as JSON, if it's not valid JSON, just return the original body
-  try {
-    body = JSON.parse(body);
-  } catch (e) {
-    // Do nothing
-  }
-
-  logWithTable(timestamp, JSON.stringify(body, null, 2)); // Use JSON.stringify for better readability if it's a JSON object
+  logWithTable(timestamp, req.body); // Use JSON.stringify for better readability if it's a JSON object
 
   res.send("success");
 });
@@ -81,7 +84,7 @@ app.listen(port, async () => {
         // reset the table
         table.length = 0;
         console.clear();
-        console.log("ready, waiting for logs...");
+        console.log("Dev deployed! Waiting for logs...");
         deployedCorrectly = true;
       }
     });
@@ -94,7 +97,7 @@ app.listen(port, async () => {
         // restart the process
         table.length = 0;
         console.clear();
-        console.log("failed to update! Save again to retry...");
+        console.log("Failed to update! Save again to retry...");
         deployedCorrectly = false;
       }
     });

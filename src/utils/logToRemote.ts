@@ -1,14 +1,18 @@
 import * as bp from ".botpress";
 
-export const log = async (content: any) => {
-  if (!bp.secrets.DEV_LOGS_URL || !bp.secrets.DEV_LOGS_URL.length) { // if we are in prod we don't want to log everything remotely.
-    console.log(content);
+export const log = async (...args: any[]) => {
+  if (!bp.secrets.DEV_LOGS_URL || !bp.secrets.DEV_LOGS_URL.length) {
+    console.log(...args);
     return;
   }
 
   const logEndpoint = `${bp.secrets.DEV_LOGS_URL}`;
-  // stringify content if not string
-  const body = typeof content === "string" ? content : JSON.stringify(content);
+
+  // if there are multiple arguments, combine them into an array
+  const body = args.length === 1 ? args[0] : JSON.stringify(args, null, "\t");
+
+  const bodyToSend =
+    typeof body === "string" ? body : JSON.stringify(body, null, "\t");
 
   try {
     const response = await fetch(logEndpoint, {
@@ -16,7 +20,7 @@ export const log = async (content: any) => {
       headers: {
         "Content-Type": "text/plain",
       },
-      body: body,
+      body: bodyToSend,
     });
 
     if (!response.ok) {

@@ -8,6 +8,8 @@ const app = express();
 
 app.use(express.text()); // To parse text bodies
 
+let deployedCorrectly = false;
+
 // Create a persistent table to store logs
 const table = new Table({
   head: [chalk.blue("Timestamp"), chalk.yellow("Log Content")],
@@ -19,6 +21,9 @@ const table = new Table({
 
 // Function to log a new entry into the existing table
 const logWithTable = (timestamp: string, body: string) => {
+  if (!deployedCorrectly) {
+    return;
+  }
   table.push([chalk.green(timestamp), JSON.parse(body)]);
 
   // Clear the console before printing the updated table (optional, for cleaner output)
@@ -68,11 +73,30 @@ app.listen(port, async () => {
     ]);
 
     nodemon.stdout.on("data", (data) => {
-      console.log(`Runner log: ${data}`);
+      const rawData = data.toString();
+      if (!deployedCorrectly) {
+        console.log(`Runner log: ${data}`);
+      }
+      if (rawData.includes("Integration deployed")) {
+        // reset the table
+        table.length = 0;
+        console.clear();
+        console.log("ready, waiting for logs...");
+        deployedCorrectly = true;
+      }
     });
 
     nodemon.stderr.on("data", (data) => {
       console.error(`Runner error: ${data}`);
+
+      const rawData = data.toString();
+      if (rawData.includes("Could not update integration")) {
+        // restart the process
+        table.length = 0;
+        console.clear();
+        console.log("failed to update! Save again to retry...");
+        deployedCorrectly = false;
+      }
     });
 
     nodemon.on("close", (code) => {

@@ -9,6 +9,15 @@ export default new IntegrationDefinition({
       messages: { ...messages.defaults },
     },
   },
+  events: {
+    contactCreated: {
+      title: "Contact Created",
+      description: "This event is received when a new contact is created in HubSpot.",
+      schema: z.object({
+        objectId: z.number().describe("The ID of the contact where the contact was created")
+      }).passthrough(),
+    },
+  },
   configuration: {
     schema: z.object({
       hubspotAppSecret: z.string().describe("HubSpot App Secret"),

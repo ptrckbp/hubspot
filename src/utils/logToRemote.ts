@@ -1,24 +1,22 @@
 import * as bp from ".botpress";
+const logEndpoint = bp.secrets.DEV_LOGS_URL;
 
-export const log = async (...args: any[]) => {
-  if (!bp.secrets.DEV_LOGS_URL || !bp.secrets.DEV_LOGS_URL.length) {
-    console.log(...args);
+const log = async (...toLog: any[]) => {
+  if (!logEndpoint) {
     return;
   }
 
-  const logEndpoint = `${bp.secrets.DEV_LOGS_URL}`;
-
-  // if there are multiple arguments, combine them into an array
-  const body = args.length === 1 ? args[0] : JSON.stringify(args, null, "\t");
-
-  const bodyToSend =
-    typeof body === "string" ? body : JSON.stringify(body, null, "\t");
+  const bodyToSend = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    toLog,
+    type: "log",
+  });
 
   try {
     const response = await fetch(logEndpoint, {
       method: "POST",
       headers: {
-        "Content-Type": "text/plain",
+        "Content-Type": "application/json",
       },
       body: bodyToSend,
     });
@@ -30,3 +28,16 @@ export const log = async (...args: any[]) => {
     console.error("Error sending log content:", error);
   }
 };
+
+// Preserve original console.log functionality
+const originalConsoleLog = console.log;
+
+if (logEndpoint && logEndpoint.length > 0) {
+  console.log = async (...args: any[]) => {
+    // Call original console.log to ensure messages appear in the local console
+    originalConsoleLog.apply(console, args);
+
+    // Also send the log message to the remote log function
+    await log(...args);
+  };
+}

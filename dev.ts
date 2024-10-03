@@ -1,54 +1,30 @@
 import express from "express";
 import ngrok from "ngrok";
 import { spawn } from "child_process";
-import Table from "cli-table3"; // For tabular logs
 import chalk from "chalk"; // For colored logs
 
 const app = express();
 
-app.use(express.text()); // To parse text bodies
+app.use(express.json()); // To parse json bodies
 
 let deployedCorrectly = false;
 
 // Create a persistent table to store logs
-const table = new Table({
-  head: [chalk.blue("Timestamp"), chalk.yellow("Log Content")],
-  colWidths: [35, 70],
-  wordWrap: true, // Ensure word wrap for longer log messages
-  wrapOnWordBoundary: false, // Wrap on word boundary
-  style: { "padding-left": 0, "padding-right": 0 },
-});
 
 // Function to log a new entry into the existing table
-const logWithTable = (timestamp: string, body: string) => {
+const logWithTable = (body: { timestamp: string; toLog: any[] }) => {
+  const { timestamp, toLog } = body;
+
   if (!deployedCorrectly) {
     return;
   }
 
-  let bodyToDisplay = body;
-
-  try {
-    const parsed = JSON.parse(body);
-    if (typeof parsed === "string") {
-      bodyToDisplay = parsed;
-    }
-  } catch (error) {
-    // do nothing
-  }
-
-  table.push([chalk.green(timestamp), bodyToDisplay]);
-
-  // Clear the console before printing the updated table (optional, for cleaner output)
-  console.clear();
-
-  console.log(table.toString());
+  console.log(chalk.blue(timestamp), ...toLog);
 };
 
 // Endpoint to log the body of the request
 app.post("/log-body", (req, res) => {
-  const timestamp = new Date().toISOString();
-
-  logWithTable(timestamp, req.body); // Use JSON.stringify for better readability if it's a JSON object
+  logWithTable(req.body); // Use JSON.stringify for better readability if it's a JSON object
 
   res.send("success");
 });
@@ -82,7 +58,7 @@ app.listen(port, async () => {
       }
       if (rawData.includes("Integration deployed")) {
         // reset the table
-        table.length = 0;
+
         console.clear();
         console.log("Dev deployed! Waiting for logs...");
         deployedCorrectly = true;
@@ -95,7 +71,7 @@ app.listen(port, async () => {
       const rawData = data.toString();
       if (rawData.includes("Could not update integration")) {
         // restart the process
-        table.length = 0;
+
         console.clear();
         console.log("Failed to update! Save again to retry...");
         deployedCorrectly = false;
